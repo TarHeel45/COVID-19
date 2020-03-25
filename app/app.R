@@ -7,6 +7,7 @@ library(leaflet) # interactive map
 library(rgdal) # geospatial data abstraction library functions
 library(geojsonio) # deal with json file
 library(sp) # deal with spatial data
+library(shinythemes)
 
 ##### Functions #####
 LagOutcomeByLocation <- function(location, metric, minimum = 100) {
@@ -30,8 +31,11 @@ LagOutcomeByLocation <- function(location, metric, minimum = 100) {
 
 CreatePlotText <- function(Region, Outcome, PlotType, ScaleType, LaggedPlot, NewPlot) {
     textPlot = "ggplotly(ggplot()"
-    if (PlotType == "Line") { textPlot = paste(textPlot, "+ geom_line(data = dfTmp, mapping = aes(x =", ifelse(LaggedPlot, "TSE,", "Date,"), "y = Value, color = ", Region, "), size = 1) + theme_minimal()")
-    } else if (PlotType == "Bar") { textPlot = paste(textPlot, "+ geom_bar(data = dfTmp, mapping = aes(x =", ifelse(LaggedPlot, "TSE,", "Date,"), "y = Value ,fill = ", Region, "), stat = 'Identity', position = \"dodge\") + theme_minimal()")
+    if (PlotType == "Line") { textPlot = paste(textPlot, "+ geom_line(data = dfTmp, mapping = aes(x =", 
+                                               ifelse(LaggedPlot, "TSE,", "Date,"), "y = Value, color = ", Region,
+                                               "), size = 1) + geom_point(data = dfTmp, mapping = aes(x =", 
+                                               ifelse(LaggedPlot, "TSE,", "Date,"), "y = Value, color =", Region, ")) + theme_minimal()")
+    } else if (PlotType == "Bar") { textPlot = paste(textPlot, "+ geom_bar(data = dfTmp, mapping = aes(x =", ifelse(LaggedPlot, "TSE,", "Date,"), "y = Value, fill =", Region, "), stat = 'Identity', position = \"dodge\") + theme_minimal()")
     }
     
     if (LaggedPlot) {
@@ -61,7 +65,7 @@ CreatePlotText <- function(Region, Outcome, PlotType, ScaleType, LaggedPlot, New
 }
 
 ##### Define UI for application #####
-ui <- fluidPage(
+ui <- fluidPage(theme = shinytheme("yeti"),
 
     # Application title
     titlePanel("COVID-19 Dashboard"),
@@ -157,7 +161,10 @@ server <- function(input, output, session) {
         
         PlotText = CreatePlotText(input$DisplayRegions, input$Outcome, input$PlotType, input$ScaleType, T, F)
         
-        eval(parse(text = PlotText))
+        if (nrow(dfTmp) == 0) { "Selected location does not have over 100 of the specified outcome"
+        } else { eval(parse(text = PlotText))
+        }
+        
     })
     
     output$NewPlot <- renderPlotly({
