@@ -1,0 +1,12 @@
+name: COVID-19
+title: COVID-19
+username:
+account: jmullan
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1992725
+bundleId: 2922374
+url: https://jmullan.shinyapps.io/COVID-19/
+when: 1585140236.06952
+asMultiple: FALSE
+asStatic: FALSE

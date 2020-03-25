@@ -10,7 +10,7 @@ library(shinythemes) # shiny UI themes
 # library(geojsonio) # deal with json file
 # library(sp) # deal with spatial data
 
-load("Data/Data.RData")
+load("Data/data.RData")
 ##### Functions #####
 LagOutcomeByLocation <- function(location, metric, minimum = 100) {
     dfCaseThreshold <- dfFull %>% group_by((!!sym(location)), Date) %>%
@@ -71,6 +71,9 @@ ui <- fluidPage(theme = shinytheme("yeti"),
 
     # Application title
     titlePanel("COVID-19 Dashboard"),
+    h3(textOutput("GlobalConfirmedCount"), align = "left"),
+    h4(textOutput("GlobalDeathCount"), align = "left"),
+    h6(textOutput("CurrentDate"), align = "left"),
     tabsetPanel(type = "tabs",
                 tabPanel("Charts", 
                          sidebarLayout(
@@ -78,17 +81,17 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                  width = 3,
                                  dateRangeInput("DateRange", "Date Range:", start = min(dfFull$Date), end = max(dfFull$Date)),
                                  selectizeInput("DisplayRegions", "Select Regions to Display:", 
-                                                    choices = c("Continents" = "continent", 
+                                                    choices = c("World" = "World", 
+                                                                "Continents" = "continent", 
                                                                 "Sub-Regions" = "sub_region",
                                                                 "Countries" = "Country"),
-                                                    selected = c("continent")),
+                                                    selected = c("World")),
                                  
                                  pickerInput("Locations", "Locations", choices = NULL, 
                                              options = list(`actions-box` = T, `live-search` = T), multiple = T), 
                                  radioButtons("Outcome", "Outcome:", 
                                               choices = c("Confirmed Cases" = "Confirmed",
-                                                          "Deaths" = "Deaths", 
-                                                          "Recoveries" = "Recovered")),
+                                                          "Deaths" = "Deaths")),
                                  div(tabsetPanel(id = "InputTabsetPanel",
                                                  tabPanel("Plot Options", 
                                                           radioButtons("PlotType", "Plot Type:", choices = c("Line", "Bar")),
@@ -126,10 +129,6 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                 )
     )
 
-
-
-
-
 ##### Define server logic #####
 server <- function(input, output, session) {
     
@@ -137,30 +136,47 @@ server <- function(input, output, session) {
         LocationChoices <- if (input$DisplayRegions == "continent") { listContinents
         } else if (input$DisplayRegions == "sub_region") { listSubRegions
         } else if (input$DisplayRegions == "Country") { listCountries
-        }
+        } else if (input$DisplayRegions == "World") { NULL }
 
         updatePickerInput(session, 'Locations', choices = LocationChoices)
     })
+    
+    output$GlobalConfirmedCount <- renderText({
+        curDate <- max(dfFull$Date)
+        paste0(prettyNum(sum(dfFull$Confirmed[dfFull$Date == curDate], na.rm=T), big.mark = ","), " Confirmed Cases")
+    })
+    
+    output$GlobalDeathCount <- renderText({
+        curDate <- max(dfFull$Date)
+        paste0(prettyNum(sum(dfFull$Deaths[dfFull$Date == curDate], na.rm=T), big.mark = ","), " Deaths")
+    })
+    
+    output$CurrentDate <- renderText({ paste("Data as of", format(max(dfFull$Date), "%d %B %Y")) })
 
     output$CumulativePlot <- renderPlotly({
-        if (is.null(input$Locations)) { return(NULL)}
-
-        dfTmp <- dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ] %>%
+        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
+        
+        if (input$DisplayRegions == "World") { dfTmp = dfFull 
+        } else { dfTmp = dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ]
+        }
+        
+        dfTmp <- dfTmp %>%
             group_by((!!sym(input$DisplayRegions)), Date) %>%
             summarise(Value = sum((!!sym(input$Outcome)), na.rm=T)) %>%
             filter(Date >= input$DateRange[1] & Date <= input$DateRange[2])
-        
+            
         PlotText = CreatePlotText(input$DisplayRegions, input$Outcome, input$PlotType, input$ScaleType, F, F)
-        
+
         eval(parse(text = PlotText))
     })
     
     output$LaggedCumulativePlot <- renderPlotly({
-        if (is.null(input$Locations)) { return(NULL)}
-
-        dfTmp <- LagOutcomeByLocation(location = input$DisplayRegions, metric = input$Outcome, minimum = 100)
-        dfTmp <- dfTmp[dfTmp[[input$DisplayRegions]] %in% input$Locations, ]
+        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
         
+        dfTmp <- LagOutcomeByLocation(location = input$DisplayRegions, metric = input$Outcome, minimum = 100)
+    
+        if (input$DisplayRegions != "World") { dfTmp = dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ] }
+
         PlotText = CreatePlotText(input$DisplayRegions, input$Outcome, input$PlotType, input$ScaleType, T, F)
         
         if (nrow(dfTmp) == 0) { "Selected location does not have over 100 of the specified outcome"
@@ -170,13 +186,17 @@ server <- function(input, output, session) {
     })
     
     output$NewPlot <- renderPlotly({
-        if (is.null(input$Locations)) { return(NULL)}
+        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
         
         if (input$Outcome == "Confirmed") { valCol = "NewCases"
         } else if (input$Outcome == "Deaths") { valCol = "NewDeaths"
         } else if (input$Outcome == "Recovered") { valCol = "NewRecoveries"}
         
-        dfTmp <- dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ] %>%
+        if (input$DisplayRegions == "World") { dfTmp = dfFull 
+        } else { dfTmp = dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ]
+        }
+        
+        dfTmp <- dfTmp %>%
             group_by((!!sym(input$DisplayRegions)), Date) %>%
             summarise(Value = sum((!!sym(valCol)), na.rm=T)) %>%
             filter(Date >= input$DateRange[1] & Date <= input$DateRange[2])
@@ -189,7 +209,5 @@ server <- function(input, output, session) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
-
 
 
