@@ -1,8 +1,11 @@
 library(tidyverse)
 
-dfConfirmed <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
-dfDeaths <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv")
-dfRecovered <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
+# dfConfirmed <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")
+# dfDeaths <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv")
+# dfRecovered <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv")
+
+dfConfirmedv2 <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+dfDeathsv2 <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
 
 cleanDF <- function(df, valueColName) { 
   df$Province.State <- as.character(df$Province.State)
@@ -22,15 +25,15 @@ cleanDF <- function(df, valueColName) {
   df %>% separate(col = 1, into = c("Province", "Country", "Latitude", "Longitude"), sep = ";")
 }
 
-dfConfirmed.Clean <- cleanDF(dfConfirmed, "Confirmed")
-dfDeaths.Clean <- cleanDF(dfDeaths, "Deaths")
-dfRecovered.Clean <- cleanDF(dfRecovered, "Recovered")
+dfConfirmed.Clean <- cleanDF(dfConfirmedv2, "Confirmed")
+dfDeaths.Clean <- cleanDF(dfDeathsv2, "Deaths")
+# dfRecovered.Clean <- cleanDF(dfRecovered, "Recovered")
 
 dfFull <- full_join(dfConfirmed.Clean, dfDeaths.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
 
-dfFull <- full_join(dfFull, dfRecovered.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
+# dfFull <- full_join(dfFull, dfRecovered.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
 
-dfCountryContinentMapping <- read.csv(file = "COVID-19/CountryContinentCrosswalk.csv")
+dfCountryContinentMapping <- read.csv(file = "Data/CountryContinentCrosswalk.csv")
 
 
 dfFull <- left_join(dfFull, dfCountryContinentMapping[, c("Country", "continent", "sub_region")], by = "Country")
@@ -61,23 +64,20 @@ names(listContinents) <- "Continents"
 dfFull <- dfFull %>% arrange(Province, Country, Date) %>%
   group_by(Province, Country) %>%
   mutate(LaggedCases = dplyr::lag(Confirmed, 1, default = 0),
-         LaggedDeaths = dplyr::lag(Deaths, 1, default = 0),
-         LaggedRecoveries = dplyr::lag(Recovered, 1, default = 0)
+         LaggedDeaths = dplyr::lag(Deaths, 1, default = 0)
   )
 
 dfFull <- dfFull %>% mutate(NewCases = Confirmed - LaggedCases,
                             NewDeaths = Deaths - LaggedDeaths,
-                            NewRecoveries = Recovered - LaggedRecoveries
-) %>% select(-c(LaggedCases, LaggedDeaths, LaggedRecoveries))
+) %>% select(-c(LaggedCases, LaggedDeaths))
+
+dfFull$World <- "World"
 
 save(dfFull, 
      dfConfirmed.Clean, 
      dfDeaths.Clean, 
-     dfRecovered.Clean, 
      listCountries,
      listSubRegions,
      listContinents,
-     file = "data.RData")
-
-
+     file = "Data/data.RData")
 
