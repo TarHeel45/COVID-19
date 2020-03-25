@@ -1,14 +1,16 @@
+library(tidyverse)
 library(shiny) 
 library(scales)
 library(shinyWidgets) # extra shiny UI options 
 library(plotly) # interactive plots 
 library(ggthemes)
-library(leaflet) # interactive map
-library(rgdal) # geospatial data abstraction library functions
-library(geojsonio) # deal with json file
-library(sp) # deal with spatial data
-library(shinythemes)
+library(shinythemes) # shiny UI themes
+# library(leaflet) # interactive map
+# library(rgdal) # geospatial data abstraction library functions
+# library(geojsonio) # deal with json file
+# library(sp) # deal with spatial data
 
+load("Data/Data.RData")
 ##### Functions #####
 LagOutcomeByLocation <- function(location, metric, minimum = 100) {
     dfCaseThreshold <- dfFull %>% group_by((!!sym(location)), Date) %>%
