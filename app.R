@@ -154,7 +154,7 @@ server <- function(input, output, session) {
     output$CurrentDate <- renderText({ paste("Data as of", format(max(dfFull$Date), "%d %B %Y")) })
 
     output$CumulativePlot <- renderPlotly({
-        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
+        if (is.null(input$Locations) & input$DisplayRegions != "World") { return(NULL)}
         
         if (input$DisplayRegions == "World") { dfTmp = dfFull 
         } else { dfTmp = dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ]
@@ -171,11 +171,11 @@ server <- function(input, output, session) {
     })
     
     output$LaggedCumulativePlot <- renderPlotly({
-        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
+        if (is.null(input$Locations) & input$DisplayRegions != "World") { return(NULL)}
         
         dfTmp <- LagOutcomeByLocation(location = input$DisplayRegions, metric = input$Outcome, minimum = 100)
     
-        if (input$DisplayRegions != "World") { dfTmp = dfFull[dfFull[[input$DisplayRegions]] %in% input$Locations, ] }
+        if (input$DisplayRegions != "World") { dfTmp = dfTmp[dfTmp[[input$DisplayRegions]] %in% input$Locations, ] }
 
         PlotText = CreatePlotText(input$DisplayRegions, input$Outcome, input$PlotType, input$ScaleType, T, F)
         
@@ -186,7 +186,7 @@ server <- function(input, output, session) {
     })
     
     output$NewPlot <- renderPlotly({
-        if (is.null(input$Locations & input$DisplayRegions != "World")) { return(NULL)}
+        if (is.null(input$Locations) & input$DisplayRegions != "World") { return(NULL)}
         
         if (input$Outcome == "Confirmed") { valCol = "NewCases"
         } else if (input$Outcome == "Deaths") { valCol = "NewDeaths"
