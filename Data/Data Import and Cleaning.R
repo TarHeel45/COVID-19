@@ -6,6 +6,8 @@ library(tidyverse)
 
 dfConfirmedv2 <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
 dfDeathsv2 <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
+dfRecoveredv2 <- read.csv(file = "csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
+
 
 cleanDF <- function(df, valueColName) { 
   df$Province.State <- as.character(df$Province.State)
@@ -27,11 +29,11 @@ cleanDF <- function(df, valueColName) {
 
 dfConfirmed.Clean <- cleanDF(dfConfirmedv2, "Confirmed")
 dfDeaths.Clean <- cleanDF(dfDeathsv2, "Deaths")
-# dfRecovered.Clean <- cleanDF(dfRecovered, "Recovered")
+dfRecovered.Clean <- cleanDF(dfRecoveredv2, "Recovered")
 
 dfFull <- full_join(dfConfirmed.Clean, dfDeaths.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
 
-# dfFull <- full_join(dfFull, dfRecovered.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
+dfFull <- full_join(dfFull, dfRecovered.Clean, by = c("Province", "Country", "Latitude", "Longitude", "Date"))
 
 dfCountryContinentMapping <- read.csv(file = "Data/CountryContinentCrosswalk.csv")
 
@@ -76,6 +78,7 @@ dfFull$World <- "World"
 save(dfFull, 
      dfConfirmed.Clean, 
      dfDeaths.Clean, 
+     dfRecovered.Clean,
      listCountries,
      listSubRegions,
      listContinents,
