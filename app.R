@@ -5,9 +5,10 @@ library(shinyWidgets) # extra shiny UI options
 library(plotly) # interactive plots 
 library(ggthemes)
 library(shinythemes) # shiny UI themes
-# library(leaflet) # interactive map
+library(rsconnect)
+library(leaflet) # interactive map
 # library(rgdal) # geospatial data abstraction library functions
-# library(geojsonio) # deal with json file
+library(geojsonio) # deal with json file
 # library(sp) # deal with spatial data
 
 load("Data/data.RData")
@@ -211,4 +212,10 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
+#deployApp()
+
+#update country name crosswalk file 
+#change and consolidate the congo issue
+#change the JHU data to match the leaflet data maybe? 
+#providers$CartoDB.Positron
 
