@@ -108,7 +108,9 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                                       numericInput("LaggedDaysToShow", "Number of Days:", value = as.numeric(max(dfFull$Date) - min(dfFull$Date))),
                                                       plotlyOutput("LaggedCumulativePlot", width = "100%")),
                                              tabPanel("New Outcomes",
-                                                      plotlyOutput("NewPlot", width = "100%"))
+                                                      plotlyOutput("NewPlot", width = "100%")),
+                                             tabPanel("World Map",
+                                                      leafletOutput("Map", width = "100%"))
                                              )
                                  )
                              )
@@ -207,15 +209,31 @@ server <- function(input, output, session) {
         
         eval(parse(text = PlotText))
     })
+    
+    output$Map <- renderLeaflet({
+        
+        dfTmp <- dfFull[dfFull$Date == max(dfFull$Date), ]
+        
+        leaflet() %>%
+            addProviderTiles(provider = providers$CartoDB.Positron) %>%
+            addCircles(lng = dfTmp$Longitude, lat = dfTmp$Latitude, 
+                       radius = dfTmp[[input$Outcome]] * 10, 
+                       popup = paste("Country:", dfTmp$Country, "<br>", 
+                                     "Cases:", prettyNum(dfTmp$Confirmed, big.mark = ","), "<br>",
+                                     "Deaths:", prettyNum(dfTmp$Deaths, big.mark = ","), "<br>",
+                                     "New Cases:", prettyNum(dfTmp$NewCases, big.mark = ","), "<br>",
+                                     "New Deaths:", prettyNum(dfTmp$NewDeaths, big.mark = ",")),
+                       color = "FF7333",
+                       fillColor = "#FF7333")
+        
+    })
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
 
-#deployApp()
+# If want to use polygons 
+# From http://data.okfn.org/data/datasets/geo-boundaries-world-110m
 
-#update country name crosswalk file 
-#change and consolidate the congo issue
-#change the JHU data to match the leaflet data maybe? 
-#providers$CartoDB.Positron
+
 
