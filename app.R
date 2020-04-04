@@ -75,62 +75,41 @@ ui <- fluidPage(theme = shinytheme("yeti"),
     h3(textOutput("GlobalConfirmedCount"), align = "left"),
     h4(textOutput("GlobalDeathCount"), align = "left"),
     h6(textOutput("CurrentDate"), align = "left"),
-    tabsetPanel(type = "tabs",
-                tabPanel("Charts", 
-                         sidebarLayout(
-                             sidebarPanel(
-                                 width = 3,
-                                 dateRangeInput("DateRange", "Date Range:", start = min(dfFull$Date), end = max(dfFull$Date)),
-                                 selectizeInput("DisplayRegions", "Select Regions to Display:", 
-                                                    choices = c("World" = "World", 
-                                                                "Continents" = "continent", 
-                                                                "Sub-Regions" = "sub_region",
-                                                                "Countries" = "Country"),
-                                                    selected = c("World")),
-                                 
-                                 pickerInput("Locations", "Locations", choices = NULL, 
-                                             options = list(`actions-box` = T, `live-search` = T), multiple = T), 
-                                 radioButtons("Outcome", "Outcome:", 
-                                              choices = c("Confirmed Cases" = "Confirmed",
-                                                          "Deaths" = "Deaths")),
-                                                          #"Recoveries" = "Recovered")),
-                                 div(tabsetPanel(id = "InputTabsetPanel",
-                                                 tabPanel("Plot Options", 
-                                                          radioButtons("PlotType", "Plot Type:", choices = c("Line", "Bar")),
-                                                          radioButtons("ScaleType", "Y-Axis Scale:", choices = c("Linear", "Log-10")))
-                                                 ))
-                             ),
+    sidebarLayout(
+        sidebarPanel(
+            width = 3,
+            dateRangeInput("DateRange", "Date Range:", start = min(dfFull$Date), end = max(dfFull$Date)),
+            selectizeInput("DisplayRegions", "Select Regions to Display:", 
+                           choices = c("World" = "World", 
+                                       "Continents" = "continent", 
+                                       "Sub-Regions" = "sub_region",
+                                       "Countries" = "Country"),
+                           selected = c("World")),
+            pickerInput("Locations", "Locations", choices = NULL, 
+                        options = list(`actions-box` = T, `live-search` = T), multiple = T), 
+            radioButtons("Outcome", "Outcome:", 
+                         choices = c("Confirmed Cases" = "Confirmed",
+                                     "Deaths" = "Deaths")),
+            #"Recoveries" = "Recovered")),
+            div(tabsetPanel(id = "InputTabsetPanel",
+                            tabPanel("Plot Options", 
+                                     radioButtons("PlotType", "Plot Type:", choices = c("Line", "Bar")),
+                                     radioButtons("ScaleType", "Y-Axis Scale:", choices = c("Linear", "Log-10")))
+                            ))),
                              mainPanel(
                                  tabsetPanel(type = "tabs",
                                              tabPanel("Cumulative",
-                                                      plotlyOutput("CumulativePlot", width = "100%")),
+                                                      plotlyOutput("CumulativePlot", width = "100%", height = 500)),
                                              tabPanel("Cumulative (Lagged)",
                                                       numericInput("LaggedDaysToShow", "Number of Days:", value = as.numeric(max(dfFull$Date) - min(dfFull$Date))),
-                                                      plotlyOutput("LaggedCumulativePlot", width = "100%")),
+                                                      plotlyOutput("LaggedCumulativePlot", width = "100%", height = 500)),
                                              tabPanel("New Outcomes",
-                                                      plotlyOutput("NewPlot", width = "100%")),
+                                                      plotlyOutput("NewPlot", width = "100%", height = 500)),
                                              tabPanel("World Map",
-                                                      leafletOutput("Map", width = "100%"))
+                                                      leafletOutput("Map", width = "100%", height = 500))
                                              )
                                  )
-                             )
-                )
-                         # ),
-                # tabPanel("World Map",
-                #          sidebarLayout(
-                #              sidebarPanel(
-                #                  width = 3, 
-                #                  dateRangeInput("DateRangeMap", "Date Range:", start = min(dfFull$Date), end = max(dfFull$Date)),
-                #                  radioButtons("OutcomeMap", "Outcome:", 
-                #                               choices = c("Confirmed Cases" = "Confirmed",
-                #                                           "Deaths" = "Deaths", 
-                #                                           "Recoveries" = "Recovered")),
-                #                  radioButtons("MetricMap", "New or Cumulative:", choices = c("New", "Cumulative"))),
-                #              mainPanel(
-                #                  plotlyOutput("WorldMap", width = "100%"))
-                #              )
-                #          )
-                )
+        )
     )
 
 ##### Define server logic #####
@@ -212,18 +191,43 @@ server <- function(input, output, session) {
     
     output$Map <- renderLeaflet({
         
-        dfTmp <- dfFull[dfFull$Date == max(dfFull$Date), ]
+        dfTmp = dfFull[dfFull$Date == max(dfFull$Date), ] %>% group_by(Country) %>%
+            summarise(
+                Confirmed = sum(Confirmed, na.rm=T),
+                Deaths = sum(Deaths, na.rm=T),
+                NewCases = sum(NewCases, na.rm=T),
+                NewDeaths = sum(NewDeaths, na.rm=T))
+        dfTmp = select(left_join(dfTmp, distinct(dfFull[, c("Province", "Latitude", "Longitude")]), by = c("Country" = "Province")), Country, Latitude, Longitude, Confirmed, Deaths, NewCases, NewDeaths)
+            
+        # if (input$Outcome == "Confirmed") { 
+        #     dfTmp = dfFull[dfFull$Date == max(dfFull$Date), ] %>% group_by(Country) %>% summarise(Confirmed = sum(Confirmed, na.rm=T))
+        #     dfTmp = select(left_join(dfTmp, distinct(dfFull[, c("Province", "Latitude", "Longitude")]), by = c("Country" = "Province")), Country, Confirmed, Latitude, Longitude)
+        # } else { 
+        #     dfTmp = dfFull[dfFull$Date == max(dfFull$Date), ] %>% group_by(Country) %>% summarise(Deaths = sum(Deaths, na.rm=T))
+        #     dfTmp = select(left_join(dfTmp, distinct(dfFull[, c("Province", "Latitude", "Longitude")]), by = c("Country" = "Province")), Country, Deaths, Latitude, Longitude)
+        # }
+        
+        # Quick fix for now to get coordinates; problem with multiple provinces for a country
+        dfTmp$Latitude[dfTmp$Country == "Australia"] = dfFull$Latitude[dfFull$Province == "South Australia" & dfFull$Date == max(dfFull$Date)]
+        dfTmp$Longitude[dfTmp$Country == "Australia"] = dfFull$Longitude[dfFull$Province == "South Australia" & dfFull$Date == max(dfFull$Date)]
+        dfTmp$Latitude[dfTmp$Country == "China"] = dfFull$Latitude[dfFull$Province == "Hubei" & dfFull$Date == max(dfFull$Date)]
+        dfTmp$Longitude[dfTmp$Country == "China"] = dfFull$Longitude[dfFull$Province == "Hubei" & dfFull$Date == max(dfFull$Date)]
+        
+        
         
         leaflet() %>%
             addProviderTiles(provider = providers$CartoDB.Positron) %>%
+            setView(lng = -2.531291, lat = 35.591436, zoom = 2) %>%
             addCircles(lng = dfTmp$Longitude, lat = dfTmp$Latitude, 
-                       radius = dfTmp[[input$Outcome]] * 10, 
+                       radius = (dfTmp[[input$Outcome]])^(1/4)*4e4, 
                        popup = paste("Country:", dfTmp$Country, "<br>", 
                                      "Cases:", prettyNum(dfTmp$Confirmed, big.mark = ","), "<br>",
                                      "Deaths:", prettyNum(dfTmp$Deaths, big.mark = ","), "<br>",
                                      "New Cases:", prettyNum(dfTmp$NewCases, big.mark = ","), "<br>",
                                      "New Deaths:", prettyNum(dfTmp$NewDeaths, big.mark = ",")),
-                       color = "FF7333",
+                       stroke = T,
+                       weight = 2, 
+                       color = "#E04600",
                        fillColor = "#FF7333")
         
     })
@@ -236,4 +240,7 @@ shinyApp(ui = ui, server = server)
 # From http://data.okfn.org/data/datasets/geo-boundaries-world-110m
 
 
+# Fix the coordinates of the countries for mapping; maybe take the average of the coordinates? 
+# But we would want to make sure we don't show 
+# Fix summarise it's dropping new cases and such
 

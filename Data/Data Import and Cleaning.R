@@ -74,6 +74,8 @@ dfFull <- dfFull %>% mutate(NewCases = Confirmed - LaggedCases,
 ) %>% select(-c(LaggedCases, LaggedDeaths))
 
 dfFull$World <- "World"
+dfFull$Latitude <- as.numeric(dfFull$Latitude)
+dfFull$Longitude <- as.numeric(dfFull$Longitude)
 
 save(dfFull, 
      dfConfirmed.Clean, 
