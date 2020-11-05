@@ -5,9 +5,9 @@ account: jmullan
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1992725
-bundleId: 3764476
+bundleId: 3821596
 url: https://jmullan.shinyapps.io/COVID-19/
-when: 1603237745.37712
+when: 1604535595.06324
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: who_covid_19_situation_reports
